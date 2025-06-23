@@ -35,29 +35,23 @@ gcloud auth login
 
 gcloud config set project ecommerce-media-agency
 
-# Set the path to your agent code directory
-# Set your Google Cloud Project ID
+ 
+Set your Google Cloud Project ID:
+
 export GOOGLE_CLOUD_PROJECT="ecommerce-media-agency"
 
-# Set your desired Google Cloud Location
+Set your desired Google Cloud Location:
+
 export GOOGLE_CLOUD_LOCATION="us-central1" # Example location
  
-# Set a name for your Cloud Run service (optional)
+Set a name for your Cloud Run service (optional):
+
 export SERVICE_NAME="media-agent-service"
 
-# Set an application name (optional)
+Set an application name (optional):
 export APP_NAME="media-agency-app"
 
-export AGENT_PATH="./media-agency" # Assuming agency is in the current directory
-
-
-adk deploy cloud_run \
---project=$GOOGLE_CLOUD_PROJECT \
---region=$GOOGLE_CLOUD_LOCATION \
---service_name=$SERVICE_NAME \
---app_name=$APP_NAME \
---with_ui \
-$AGENT_PATH
+Assuming media-agency is in the current directory: 
 
 adk deploy cloud_run \
 --project=$GOOGLE_CLOUD_PROJECT \
