@@ -27,6 +27,7 @@ import os
 from PIL import Image  
 import PIL.Image
  
+ 
 from google.adk.tools.tool_context import ToolContext
 from google.adk.agents.callback_context import CallbackContext
 
@@ -1167,9 +1168,10 @@ async def call_product_descriptor_a2a_server(tool_context: ToolContext) -> dict:
         # loop through each image in the media folder and change the background to white
         # client = genai.Client(api_key=APIKEY)
 
-        # agent_url = "http://localhost:8080"
-        agent_url = "http://localhost:10002"
+        agent_url = "http://localhost:8080"
+        # agent_url = "http://localhost:10002"
         # agent_url="https://product-description-agent-863901711660.us-central1.run.app"
+        # agent_url="https://product-description-agent-863901711660.us-east1.run.app/"
 
         logger.info ("call_product_descriptor_a2a_server..." + agent_url)
 
@@ -1191,7 +1193,7 @@ async def call_product_descriptor_a2a_server(tool_context: ToolContext) -> dict:
                 image = get_image_local_or_gcs(image_path_or_blob_name=image_name,SOURCE_BUCKET_NAME=media_folder,isUsingGCS=IS_USE_GCS)
                 # 2. Create a BytesIO object
                 byte_stream = BytesIO()
-
+                
                 # 3. Save the image to the BytesIO object, specifying the format (e.g., 'PNG', 'JPEG')
                 image.save(byte_stream, format='PNG') 
 
@@ -1550,14 +1552,23 @@ def get_image_local_or_gcs(image_path_or_blob_name:str,SOURCE_BUCKET_NAME, isUsi
                 gcs_client = get_gcs_client()
                 if not gcs_client:
                     return "Failed to initialize GCS client."
-            
+                else:
+                    logger.info("successfully get GCS client. Downloading file...")
                 # Get the source bucket and blob
                 source_bucket = gcs_client.bucket(SOURCE_BUCKET_NAME)
+                logger.info("got source_bucket")
+
                 source_blob = source_bucket.blob(image_path_or_blob_name)
+                logger.info("got source_bucket.blob")
 
                 # Download the image into memory
                 image_bytes = source_blob.download_as_bytes()
-                image = Image.open(BytesIO(image_bytes))
+                logger.info("got source_blob.download_as_bytes")
+
+                # image_bytes_decoded = image_bytes.decode("utf-8")
+                # logger.info("got image_bytes.decode()")
+
+                image = PIL.Image.open(BytesIO(image_bytes))
 
                 logger.info ("get_image_local_or_gcs, successfully download image from bucket:" + SOURCE_BUCKET_NAME + ", blob:" + image_path_or_blob_name)
 
@@ -1569,4 +1580,5 @@ def get_image_local_or_gcs(image_path_or_blob_name:str,SOURCE_BUCKET_NAME, isUsi
                 return image
 
     except Exception as e:
+        logger.debug(f"Error in get_image_local_or_gcs: {e}")
         return f"An error occurred while processing {image_path_or_blob_name}: {e}"

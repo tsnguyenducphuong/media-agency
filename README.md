@@ -12,6 +12,8 @@ python -m venv .venv
 
 source .venv/bin/activate
 
+pip install google-adk
+
 pip install -r requirements.txt
 
 4. Change the .env variables: update your Google API Key, etc.
@@ -27,9 +29,11 @@ adk web
 
 
 II. Deploy to Cloud Run:
-python -m venv .venv
+uv venv
 source .venv/bin/activate
-pip install google-adk
+
+Test if it is working:
+uv run --active .
 
 gcloud auth login
 
@@ -42,7 +46,7 @@ export GOOGLE_CLOUD_PROJECT="ecommerce-media-agency"
 
 Set your desired Google Cloud Location:
 
-export GOOGLE_CLOUD_LOCATION="us-central1" # Example location
+export GOOGLE_CLOUD_LOCATION="us-central1"  
  
 Set a name for your Cloud Run service (optional):
 
@@ -51,15 +55,15 @@ export SERVICE_NAME="media-agent-service"
 Set an application name (optional):
 export APP_NAME="media-agency-app"
 
-Assuming media-agency is in the current directory: 
+Assuming 'media-agency' is the current directory in which subfolder is 'media_agent'
 
 adk deploy cloud_run \
 --project=$GOOGLE_CLOUD_PROJECT \
 --region=$GOOGLE_CLOUD_LOCATION \
 --service_name=$SERVICE_NAME \
---app_name=$APP_NAME \
 --with_ui \
-.
+media_agent
+
 
 
 For connect with the A2A Server and Product Description Agents, clone the code with following command:
