@@ -13,7 +13,7 @@ COPY requirements.txt .
 #     libfontconfig1 \
 #     libgl1-mesa-glx \
 #     libgl1-mesa-dri && \
-#     pip install --no-cache-dir -r requirements.txt
+#     pip install --no-cache-dir -r requirements.txt #review
 
 COPY . .
 
