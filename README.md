@@ -10,7 +10,7 @@ Demo video:  https://www.youtube.com/shorts/mHHoanUd0MQ
 
 [Architecture Diagram](docs/ecommerce_media_agency_diagram_full.png)
 
-<img src="docs/ecommerce_media_agency_diagram_full.png" width="200"/>
+<img src="docs/ecommerce_media_agency_diagram_full.png" width="600"/>
 
 1. Clone the source code:
 gh repo clone tsnguyenducphuong/media-agency
