@@ -1,6 +1,10 @@
 # media-agency
 Ecommerce Media Agency
 
+Demo video:  https://www.youtube.com/shorts/mHHoanUd0MQ
+
+[![Demo Video](https://img.youtube.com/vi/mHHoanUd0MQ/0.jpg)](https://www.youtube.com/shorts/mHHoanUd0MQ))
+
 1. Clone the source code:
 gh repo clone tsnguyenducphuong/media-agency
 
