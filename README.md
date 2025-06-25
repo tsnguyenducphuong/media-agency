@@ -32,7 +32,7 @@ to implement multi-agents that specialized in media content generation (image, v
 
 The Ecommerce Media Agency agents can be configured to run locally or processing images stored in Google Cloud Storage.
 
-<img src="docs/ecommerce_media_agency_diagram_full.png" width="600"/>
+<img src="ecommerce_media_agency_diagram_full.png" width="600"/>
 
 ## How to run:
 
