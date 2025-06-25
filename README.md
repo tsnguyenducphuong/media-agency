@@ -1,7 +1,7 @@
 # Ecommerce Media Agency
 
 ## I. Introduction:
-AI agents that are specialized in creating beautiful content (images, video, and desciprtion) for your product.
+AI agents that are specialized in creating beautiful content (images, video, and product description) for your product images.
 
 ## Key features:
 
@@ -124,4 +124,4 @@ media_agent
 gh repo clone tsnguyenducphuong/product_description_a2a_server
 ```
 
-Follow the README instruction to confiture the A2A Server and Product Description Agents. Have fun!
+Follow the [A2A server README instruction](https://github.com/tsnguyenducphuong/product_description_a2a_server) to configure the A2A Server and Product Description Agents. Have fun!
