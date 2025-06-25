@@ -1,0 +1,32 @@
+FROM python:3.12-slim
+
+RUN pip install --no-cache-dir uv==0.7.13
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libegl1 \
+    libgl1 \
+    libglib2.0-0 \
+    rm -rf /var/lib/apt/lists/*
+
+
+WORKDIR /app
+
+COPY requirements.txt .
+COPY . .
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libfontconfig1 \
+    libgl1-mesa-glx \
+    libgl1-mesa-dri \
+    libgdk-pixbuf2.0-0 \
+    libxkncommon-x11 
+    && \
+    pip install --no-cache-dir -r requirements.txt #review
+ 
+
+# RUN pip install --no-cache-dir -r requirements.txt
+
+RUN uv sync --frozen
+
+EXPOSE 8080
+
+CMD ["uv", "run", "."]

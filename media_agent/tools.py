@@ -12,10 +12,14 @@ from google.genai.types import Image as googleImage
 
  
 from io import BytesIO
+
+#PRODUCTION_REM until fix issue running skia: missing libEGL.so.1 for Cloud Run:
+# ImportError: Fail to load 'media_agent' module. libEGL.so.1: cannot open shared object file: No such file or directory
 import skia
+
 import numpy as np
 
-from google.cloud import storage
+from google.cloud import storage 
 
 from dotenv import load_dotenv
 
@@ -43,10 +47,6 @@ from a2a.types import JSONRPCErrorResponse,Part, FilePart,FileWithBytes, Message
 from a2a.client import A2ACardResolver
 
  
-
-# from a2a.types import FilePart, Message, MessageSendParams, Role, TaskStatus, TextPart
-
-
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__) 
 
@@ -55,14 +55,17 @@ nest_asyncio.apply()
 
 APIKEY = os.getenv("GOOGLE_API_KEY")
 
-IMAGE_EDIT_MODEL=os.getenv("IMAGE_EDIT_MODEL","gemini-2.5-flash-preview-05-20")
+IMAGE_EDIT_MODEL=os.getenv("IMAGE_EDIT_MODEL","gemini-2.0-flash-preview-image-generation")
 # IMAGE_EDIT_MODEL=os.getenv("IMAGE_EDIT_MODEL","imagen-3.0-capability-001")
 
 ENABLE_VERTEXAI=os.getenv("ENABLE_VERTEXAI",False)
 GOOGLE_CLOUD_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT","ecommerce-media-agency")
 VIDEO_MODEL  = os.getenv("VIDEO_MODEL","veo-3.0-generate-preview")
 LOCATION = os.getenv("GOOGLE_CLOUD_REGION", "us-central1")
+
+
 GOOGLE_APPLICATION_CREDENTIALS=os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+
 IS_USE_VEO3=os.getenv("IS_USE_VEO3",False) 
  
 IS_USE_GCS=(os.getenv('IS_USE_GCS', 'False') == 'True')
@@ -346,7 +349,7 @@ def background_replacer(tool_context: ToolContext) -> dict:
             return {"error": "no image found in media folder: " + media_folder} 
 
         # loop through each image in the media folder and change the background to white
-        client = genai.Client(api_key=APIKEY) 
+        client = genai.Client(api_key=APIKEY,vertexai=False) 
 
         for image_name in image_list:   
             if IS_USE_GCS == True:
@@ -559,7 +562,7 @@ def make_whitebackground_image(tool_context: ToolContext) -> dict:
             output_folder = os.path.join(media_folder,PROCESSED_FOLDER)
             os.makedirs(output_folder, exist_ok=True) 
 
-        logger.info ("make_whitebackground_image, calling images_list_from_folder: " + media_folder)
+        logger.info ("make_whitebackground_image, vertexai = false, calling images_list_from_folder: " + media_folder)
         
         image_list = images_list_from_folder(media_folder)  
 
@@ -567,7 +570,7 @@ def make_whitebackground_image(tool_context: ToolContext) -> dict:
             return {"error": "no image found in media folder: " + media_folder} 
 
         # loop through each image in the media folder and change the background to white
-        client = genai.Client(api_key=APIKEY)
+        client = genai.Client(api_key=APIKEY,vertexai=False)
 
         for image_name in image_list:   
             output_image_path = image_name.replace(".", "_whitebackground.")
@@ -646,7 +649,7 @@ def create_carousel_image(tool_context: ToolContext) -> dict:
             return {"error": "no image found in media folder: " + media_folder} 
 
         # loop through each image in the media folder and change the background to white
-        client = genai.Client(api_key=APIKEY)
+        client = genai.Client(api_key=APIKEY,vertexai=False)
 
         for image_name in image_list:   
             output_image_path = image_name.replace(".", "_carousel.")
@@ -726,7 +729,9 @@ def generate_product_video(tool_context: ToolContext) -> dict:
             return {"error": "no image found in media folder: " + media_folder} 
 
         # loop through each image in the media folder and change the background to white
-        client = genai.Client(api_key=APIKEY)
+        # client = genai.Client(api_key=APIKEY)
+        client = genai.Client(vertexai=True, project=GOOGLE_CLOUD_PROJECT, location=LOCATION)
+        
 
         for image_name in image_list:   
             image_path = os.path.join(media_folder, image_name) 
@@ -762,18 +767,25 @@ def generate_product_video(tool_context: ToolContext) -> dict:
             ) 
 
             # output_gcs = "gs://"
-            my_credentials = service_account.Credentials.from_service_account_file(GOOGLE_APPLICATION_CREDENTIALS)
+            #PRODUCTION_REM
+            # my_credentials = None
+            # my_credentials = service_account.Credentials.from_service_account_file(GOOGLE_APPLICATION_CREDENTIALS)
+            
             # genai.configure(credentials)
             # Adjust scopes as needed
-            scoped_credentials = my_credentials.with_scopes(
-                    ['https://www.googleapis.com/auth/cloud-platform'])
-            client = genai.Client(vertexai=True, project=GOOGLE_CLOUD_PROJECT, location=LOCATION, credentials=scoped_credentials)
+
+            #PRODUCTION_REM
+            # scoped_credentials = my_credentials.with_scopes(
+            #         ['https://www.googleapis.com/auth/cloud-platform'])
+            # client = genai.Client(vertexai=True, project=GOOGLE_CLOUD_PROJECT, location=LOCATION, credentials=scoped_credentials)
         
+            
             local_input_image = types.Image.from_file(location=image_path)
             input_image=types.Image(
             image_bytes=local_input_image.image_bytes,
             mime_type="image/png",)
 
+            
             operation = client.models.generate_videos(
             model=VIDEO_MODEL,
             prompt=video_prompt,
@@ -783,8 +795,10 @@ def generate_product_video(tool_context: ToolContext) -> dict:
 
             isVideoGenerated = 0
 
+            
             while not operation.done:
                 time.sleep(30) #wait 30 seconds for video generation
+                
                 operation = client.operations.get(operation)
                 print(operation)
 
@@ -828,7 +842,7 @@ def generate_multi_angles_image(tool_context: ToolContext) -> dict:
             return {"error": "no image found in media folder: " + media_folder} 
 
         # loop through each image in the media folder and change the background to white
-        client = genai.Client(api_key=APIKEY)
+        client = genai.Client(api_key=APIKEY,vertexai=False)
 
         for image_name in image_list:  
 
@@ -894,12 +908,18 @@ def load_image_bytes(image_path):
 
 # Convert image bytes to Skia image
 def skia_image_from_bytes(image_bytes):
+    #PRODUCTION_REM
+    # skia = None
+
     return skia.Image.MakeFromEncoded(image_bytes)
 
 # Main function to draw image on background
 def draw_image_with_background(image_path, output_path, bg_color=(255, 255, 255)) -> int:
 
     try:
+        #PRODUCTION_REM
+        # skia = None
+
         # Load image
         image_bytes = load_image_bytes(image_path)
         skia_img = skia_image_from_bytes(image_bytes)
@@ -1051,6 +1071,9 @@ def is_valid_brandimage(brandimagepath:str):
 def generate_thumbnail_with_skia(image_path, output_path,output_filename,media_folder) -> int:
 
     try:
+        #PRODUCTION_REM
+        # skia = None
+
         # Load the image
         image = skia.Image.open(image_path)
         
@@ -1078,6 +1101,9 @@ def generate_thumbnail_with_skia(image_path, output_path,output_filename,media_f
 def upscale_image_with_skia(image_path, output_path, upscale_factor, pil_image:Image,output_image_path,media_folder,output_folder) -> int:
 
     try:
+        #PRODUCTION_REM
+        # skia = None
+
         # Load the image
         if not pil_image:
             image = skia.Image.open(image_path)
@@ -1170,9 +1196,7 @@ async def call_product_descriptor_a2a_server(tool_context: ToolContext) -> dict:
 
         agent_url = "http://localhost:8080"
         # agent_url = "http://localhost:10002"
-        # agent_url="https://product-description-agent-863901711660.us-central1.run.app"
-        # agent_url="https://product-description-agent-863901711660.us-east1.run.app/"
-
+      
         logger.info ("call_product_descriptor_a2a_server..." + agent_url)
 
         async with httpx.AsyncClient(timeout=30) as http_client:
