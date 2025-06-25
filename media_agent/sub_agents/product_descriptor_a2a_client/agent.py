@@ -11,7 +11,7 @@ load_dotenv()
 LLMAGENT_MODEL = os.getenv('LLMAGENT_MODEL')
 
 product_descriptor_a2a_client_agent = LlmAgent(
-    name="product_descriptor_a2a_client_agent",
+    name="product_descriptor_a2a_client",
     model=LLMAGENT_MODEL,
     description="Make product description from product image. This agent will make the product description using the tool call_product_descriptor_a2a_server." \
     "The product description will be used for ecommerce platform.",

@@ -21,18 +21,18 @@ media_processing_parallel = ParallelAgent(
     sub_agents=[ 
         background_replacer_agent, #ok 2
         carousel_generator_agent, #ok 2
-        # image_upscaler_agent,     #ok local, not ok GCS
+        image_upscaler_agent,     #ok local, not ok GCS
         multi_angles_generator_agent,#ok 2
-        product_video_generator_agent, #ok local
+        # product_video_generator_agent, #ok local
         # skia_effect_agent, #ok not use
         # thumbnail_generator_agent, #ok, not use
-        product_descriptor_a2a_client_agent #ok
+        # product_descriptor_a2a_client_agent #ok
         ],
     description="Transform the raw products’ images into studio quality images and video, ready for ecommerce"
 )
  
 media_agent = SequentialAgent(
-    name="EcommeceMediaAgency",
+    name="media_agent",
     sub_agents=[
                 #greatings_agent, #Step 0: greating the user and ready to start the e-commerce media content generation process
                 media_collector_agent, #Step 1: Get the folder contains raw product images, and ask for brand background image. Put into context

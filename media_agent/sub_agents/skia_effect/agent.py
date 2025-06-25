@@ -11,7 +11,7 @@ LLMAGENT_MODEL = os.getenv('LLMAGENT_MODEL')
 
 
 skia_effect_agent = LlmAgent(
-    name="skia_effect_agent",
+    name="skia_effect",
     model=LLMAGENT_MODEL,
     description="Generate Skia Effects for image. This agent generates image with special background color using skia." \
     "The input images are in media folder (specified by user)",

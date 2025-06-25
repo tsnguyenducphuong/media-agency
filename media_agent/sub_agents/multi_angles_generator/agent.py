@@ -12,7 +12,7 @@ LLMAGENT_MODEL = os.getenv('LLMAGENT_MODEL')
 
 
 multi_angles_generator_agent = LlmAgent(
-    name="multi_angles_generator_agent",
+    name="multi_angles_generator",
     model=LLMAGENT_MODEL,
     description="Generate multi angles images from single input image. Multi angels images makes product's images look more beautiful." \
     "This agent will help to generate multi angles images from input images in the media folder (specified by user).",

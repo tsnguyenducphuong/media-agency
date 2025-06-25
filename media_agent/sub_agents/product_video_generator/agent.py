@@ -10,7 +10,7 @@ load_dotenv()
 LLMAGENT_MODEL = os.getenv('LLMAGENT_MODEL')
 
 product_video_generator_agent = LlmAgent(
-    name="product_video_generator_agent",
+    name="product_video_generator",
     model=LLMAGENT_MODEL,
     description="Make beautiful product video from product image. This agent creates beautiful product video for the images in media folder (specified by user).",
     instruction="""

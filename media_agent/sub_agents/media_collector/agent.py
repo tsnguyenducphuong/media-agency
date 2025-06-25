@@ -14,8 +14,7 @@ from media_agent.tools import _load_precreated_defaultvalues,set_media_folder
  
 
 media_collector_agent = LlmAgent(
-    #  name="initial_media_collector_agent",
-    name="MediaCollectorAgent",
+    name="media_collector",
     model= LLMAGENT_MODEL,  
     description="Collect information about media folder that contains the products' images." \
     "The media folder is the GCS bucket or the local folder in which user stores all the images for the media agency to process." \

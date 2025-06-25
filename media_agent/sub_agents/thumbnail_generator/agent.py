@@ -11,7 +11,7 @@ load_dotenv()
 LLMAGENT_MODEL = os.getenv('LLMAGENT_MODEL')
 
 thumbnail_generator_agent = LlmAgent(
-    name="thumbnail_generator_agent",
+    name="thumbnail_generator",
     model=LLMAGENT_MODEL,
     description="Generate Image Thumbnails. This agent generate thumbnail image (by default 200px) for the images in media folder (specified by user)",
     instruction="""

@@ -12,7 +12,7 @@ LLMAGENT_MODEL = os.getenv('LLMAGENT_MODEL')
 
 
 carousel_generator_agent = LlmAgent(
-    name="carousel_generator_agent",
+    name="carousel_generator",
     model=LLMAGENT_MODEL,
     description="Image Carousel Generator Agent. This agent helps to generate beautiful carousel image from a single input image.",
     instruction="""

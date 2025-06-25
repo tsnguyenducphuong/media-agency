@@ -5,7 +5,7 @@ AI agents that are specialized in creating beautiful content (images, video, and
 
 ## Key features:
 
-Useful for Ecommerce and Marketing use cases, in which you have thoundsands of product images and the Ecommerce Media Agency will help you to:
+Useful for Ecommerce and Marketing use cases, in which you have thoudsands of product images and the Ecommerce Media Agency will help you to:
 
 1. **White background**: Convert your 1000++ product images with many different backgrounds or distracted background to standard white background (often required by platform like Amazon, EBay, Etsy...)
 
@@ -15,7 +15,7 @@ Useful for Ecommerce and Marketing use cases, in which you have thoundsands of p
 
 4. **Product Video**: Transform your product images into beautiful product introduction video
 
-5. **Product Description**: Write beautiful product decription based on your product images
+5. **Product Description**: Write beautiful product description based on your product images
 
 
 **Demo video**:  https://www.youtube.com/shorts/mHHoanUd0MQ
@@ -64,6 +64,11 @@ pip install -r requirements.txt
 5. **Run command:**
 
 ```bach
+
+glound init
+
+gcloud auth application-default login
+
 adk web
 ```
 
@@ -108,6 +113,8 @@ export APP_NAME="media-agent"
 
 Assuming 'media-agency' is the current directory in which subfolder is 'media_agent'
 
+**Deploy using adk cli:**
+
 ```bash
 adk deploy cloud_run \
 --project=$GOOGLE_CLOUD_PROJECT \
@@ -117,6 +124,20 @@ adk deploy cloud_run \
 media_agent
 ```
 
+**Or deploy using gcloud:**
+
+Update the GOOGLE_API_KEY inside the envvariables.yaml file with your API KEY.
+
+```bash
+
+gcloud run deploy media-agent-service \
+--source . \
+--region $GOOGLE_CLOUD_LOCATION \
+--project $GOOGLE_CLOUD_PROJECT \
+--allow-unauthenticated \
+--env-vars-file=envvariables.yaml
+
+```
 
 **For connect with the A2A Server and Product Description Agents, clone the code with following command:**
 

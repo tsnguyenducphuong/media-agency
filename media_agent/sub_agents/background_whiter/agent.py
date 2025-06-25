@@ -11,14 +11,14 @@ load_dotenv()
 LLMAGENT_MODEL = os.getenv('LLMAGENT_MODEL')
 
 background_whiter_agent = LlmAgent(
-    name="background_whiter_agent",
+    name="background_whiter",
     model=LLMAGENT_MODEL,
     description="Make white background for image. This agent will make the background become white for all the images in the media folder (specified by user)." \
     "The white background image is a common requirement of many ecommerce platform.",
     instruction="""
     You are a helpful assistant that make the white background image using the following tool:
     - make_whitebackground_image 
-
+ 
     Once the tool is completed, handover to other agent
 
     """,

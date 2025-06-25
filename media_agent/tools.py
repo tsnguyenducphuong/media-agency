@@ -1,5 +1,6 @@
 from datetime import datetime
 import time
+import io
 
 import uuid
 import re
@@ -13,8 +14,7 @@ from google.genai.types import Image as googleImage
  
 from io import BytesIO
 
-#PRODUCTION_REM until fix issue running skia: missing libEGL.so.1 for Cloud Run:
-# ImportError: Fail to load 'media_agent' module. libEGL.so.1: cannot open shared object file: No such file or directory
+ 
 import skia
 
 import numpy as np
@@ -194,6 +194,9 @@ def images_list_from_folder(media_folder: str) -> dict:
 
 
 def set_media_folder(tool_context: ToolContext, newfolder:str) -> dict:
+    
+    # standardize GCS bucket
+    newfolder = newfolder.replace("gs://","")
 
     tool_context.state["media_folder"] =  newfolder
     return {
@@ -507,9 +510,12 @@ def generate_thumbnails(tool_context: ToolContext) -> dict:
             if not image_path:
                 return {"error": "no valid image path"} 
 
-            # output_image_path = image_name.replace(".", "_thumbnail.")
-            output_image_name = image_name.replace(".", "_thumbnail.")
-            output_path = os.path.join(output_folder,output_image_name)  
+            
+            output_image_name = image_name.replace(".", "_thumbnail.") 
+             
+            output_path = os.path.join(media_folder,PROCESSED_FOLDER) 
+            output_path = os.path.join(output_path,output_image_name) 
+
 
             if IS_USE_GCS == True:
                 image = get_image_local_or_gcs(image_path_or_blob_name=image_name,SOURCE_BUCKET_NAME=media_folder,isUsingGCS=IS_USE_GCS)
@@ -529,7 +535,8 @@ def generate_thumbnails(tool_context: ToolContext) -> dict:
                     image_path=image_path,     # Replace with your image file
                     output_path=output_path,   # Output image path 
                     output_filename=output_image_name,
-                    media_folder=media_folder
+                    media_folder=media_folder,
+                    pil_image=image
                 )
  
 
@@ -907,18 +914,14 @@ def load_image_bytes(image_path):
         return f.read()
 
 # Convert image bytes to Skia image
-def skia_image_from_bytes(image_bytes):
-    #PRODUCTION_REM
-    # skia = None
+def skia_image_from_bytes(image_bytes): 
 
     return skia.Image.MakeFromEncoded(image_bytes)
 
 # Main function to draw image on background
 def draw_image_with_background(image_path, output_path, bg_color=(255, 255, 255)) -> int:
 
-    try:
-        #PRODUCTION_REM
-        # skia = None
+    try: 
 
         # Load image
         image_bytes = load_image_bytes(image_path)
@@ -1068,14 +1071,25 @@ def is_valid_brandimage(brandimagepath:str):
 
  
 
-def generate_thumbnail_with_skia(image_path, output_path,output_filename,media_folder) -> int:
+def generate_thumbnail_with_skia(image_path, output_path,output_filename,media_folder,pil_image) -> int:
 
-    try:
-        #PRODUCTION_REM
-        # skia = None
+    try: 
 
         # Load the image
-        image = skia.Image.open(image_path)
+        if IS_USE_GCS:
+            pil_image_rgba = pil_image.convert('RGBA') 
+
+            # Load the image bytes into a Skia Image object 
+            # skia_image = skia.Image.MakeFromEncoded(image_bytes) 
+            # Convert to numpy array
+            np_img = np.array(pil_image_rgba)
+
+            # Create Skia image from numpy array
+            height, width = np_img.shape[:2]
+            image = skia.Image.fromarray(np_img)
+        
+        else:
+            image = skia.Image.open(image_path)
         
         thumbnail_size = 200
 
@@ -1088,9 +1102,20 @@ def generate_thumbnail_with_skia(image_path, output_path,output_filename,media_f
             new_width = int(image.width() * (thumbnail_size/image.height()))
 
         thumbnail_image = image.resize(width=new_width,height=new_height)
+
+        image_bytes_io = BytesIO()
+
+            # Save the skia image to the BytesIO object
+            # You need to specify the image format (e.g., skia.kPNG, skia.kJPEG)
+        thumbnail_image.save(image_bytes_io, skia.kPNG)
+
+            # After saving, the BytesIO object's internal pointer is at the end of the data.
+            # To read the bytes, you need to seek back to the beginning.
+        image_bytes_io.seek(0)
   
         # thumbnail_image.save(output_path)
-        save_image_local_or_gcs(thumbnail_image,output_path,output_filename,media_folder,IS_USE_GCS,isByteIOImage=False,byteIOImage=None)
+        source_bucket = media_folder.replace("gs://","")
+        save_image_local_or_gcs(image=image_bytes_io,output_blob_name=output_filename,SOURCE_BUCKET_NAME=source_bucket,OUTPUT_FOLDER_NAME=PROCESSED_FOLDER,isSaveGCS=IS_USE_GCS,isByteIOImage=False,byteIOImage=None)
 
         return 0
     except Exception as e:
@@ -1098,27 +1123,25 @@ def generate_thumbnail_with_skia(image_path, output_path,output_filename,media_f
         return -1
  
 
-def upscale_image_with_skia(image_path, output_path, upscale_factor, pil_image:Image,output_image_path,media_folder,output_folder) -> int:
+def upscale_image_with_skia(image_path, output_path, upscale_factor, pil_image,output_image_path,media_folder,output_folder) -> int:
 
     try:
-        #PRODUCTION_REM
-        # skia = None
-
+         
         # Load the image
         if not pil_image:
             image = skia.Image.open(image_path)
         else: #convert PIL image to Skia image
             # Convert PIL Image to RGBA if not already
-            # pil_image_rgba = pil_image.convert('RGBA')
-    
-            # Get image data as bytes
-            image_bytes = pil_image.tobytes()
-            # Create Skia Image with specified alpha and color types
-            image = skia.Image.fromarray(
-                image_bytes,
-                alphaType=skia.kUnpremul_AlphaType, # Or kPremul_AlphaType depending on your needs
-                colorType=skia.kRGBA_8888_ColorType
-            )
+            pil_image_rgba = pil_image.convert('RGBA') 
+
+            # Load the image bytes into a Skia Image object 
+            # skia_image = skia.Image.MakeFromEncoded(image_bytes) 
+            # Convert to numpy array
+            np_img = np.array(pil_image_rgba)
+
+            # Create Skia image from numpy array
+            height, width = np_img.shape[:2]
+            image = skia.Image.fromarray(np_img)
         
         # Calculate new dimensions
         new_width = int(image.width() * upscale_factor)
@@ -1570,29 +1593,36 @@ def save_image_local_or_gcs(image: Image, output_blob_name:str,SOURCE_BUCKET_NAM
 
 def get_image_local_or_gcs(image_path_or_blob_name:str,SOURCE_BUCKET_NAME, isUsingGCS:bool) -> Image:
 
-    try:
+    try:    
+            standardize_source_bucket = SOURCE_BUCKET_NAME.replace("gs://","")
+
             if isUsingGCS == True:
                 print ("get_image_local_or_gcs, calling get_gcs_client...: " + image_path_or_blob_name)
                 gcs_client = get_gcs_client()
                 if not gcs_client:
                     return "Failed to initialize GCS client."
                 else:
-                    logger.info("successfully get GCS client. Downloading file...")
+                    logger.info("successfully get GCS client. Downloading file:" + image_path_or_blob_name )
                 # Get the source bucket and blob
-                source_bucket = gcs_client.bucket(SOURCE_BUCKET_NAME)
-                logger.info("got source_bucket")
+                source_bucket = gcs_client.bucket(standardize_source_bucket)
+                logger.info("got source_bucket for:" + standardize_source_bucket)
 
                 source_blob = source_bucket.blob(image_path_or_blob_name)
-                logger.info("got source_bucket.blob")
+                logger.info("got source_bucket.blob") 
 
-                # Download the image into memory
                 image_bytes = source_blob.download_as_bytes()
-                logger.info("got source_blob.download_as_bytes")
 
-                # image_bytes_decoded = image_bytes.decode("utf-8")
-                # logger.info("got image_bytes.decode()")
+                # Download the image into memory file
+                in_memory_file = io.BytesIO(image_bytes)
 
-                image = PIL.Image.open(BytesIO(image_bytes))
+                # Open the in-memory file with PIL
+                image = PIL.Image.open(in_memory_file)
+                 
+                logger.info(f"Successfully downloaded image from GCS.")
+
+                 
+                #PRODUCTION_REM
+                # image = PIL.Image.open(BytesIO(image_bytes))
 
                 logger.info ("get_image_local_or_gcs, successfully download image from bucket:" + SOURCE_BUCKET_NAME + ", blob:" + image_path_or_blob_name)
 
