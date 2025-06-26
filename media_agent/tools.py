@@ -72,6 +72,8 @@ IS_USE_GCS=(os.getenv('IS_USE_GCS', 'False') == 'True')
 
 PROCESSED_FOLDER=os.getenv("PROCESSED_FOLDER","processed_media")
 WHITEBACKGROUND_FOLDER=os.getenv("WHITEBACKGROUND_FOLDER","white_background")
+
+AGENT_URL=os.getenv("AGENT_URL","localhost")
  
 def _load_precreated_defaultvalues(callback_context: CallbackContext):
     """
@@ -1217,21 +1219,21 @@ async def call_product_descriptor_a2a_server(tool_context: ToolContext) -> dict:
         # loop through each image in the media folder and change the background to white
         # client = genai.Client(api_key=APIKEY)
 
-        agent_url = "http://localhost:8080"
-        # agent_url = "http://localhost:10002"
-      
-        logger.info ("call_product_descriptor_a2a_server..." + agent_url)
+        # agent_url = "http://localhost:8080"
+        # # agent_url = "http://localhost:10002"
+       
+        logger.info ("call_product_descriptor_a2a_server..." + AGENT_URL)
 
         async with httpx.AsyncClient(timeout=30) as http_client:
         # async with httpx.AsyncClient() as client:
-          logger.info(f"Discovering A2A agent at {agent_url}")
-          card_resolver = A2ACardResolver(http_client, agent_url)
+          logger.info(f"Discovering A2A agent at {AGENT_URL}")
+          card_resolver = A2ACardResolver(http_client, AGENT_URL)
         #   agent_card = await A2AClient.get_agent_card(http_client, agent_url)
           agent_card = await card_resolver.get_agent_card()
           logger.info(f"A2A Agent Card received: {agent_card.name}")
 
         #   client = await A2AClient.get_client_from_agent_card(http_client, agent_card) 
-          client = A2AClient(http_client, agent_card, url=agent_url)
+          client = A2AClient(http_client, url=AGENT_URL)
          
         #   logger.info ("call_product_descriptor_a2a_server, await A2AClient.get_client_from_agent_card")
 
@@ -1321,8 +1323,9 @@ async def call_product_descriptor_a2a_server(tool_context: ToolContext) -> dict:
             # response = await client.send_message(message_request)
 
             # send_response: SendMessageResponse = await client.send_message(message_request)
+             
             send_response: SendMessageResponse = await client.send_message(message_request_working)
-            
+           
             # send_response: SendMessageResponse = await client.send_message(message_request_payload)
             
 

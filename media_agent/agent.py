@@ -26,7 +26,7 @@ media_processing_parallel = ParallelAgent(
         # product_video_generator_agent, #ok local
         # skia_effect_agent, #ok not use
         # thumbnail_generator_agent, #ok, not use
-        # product_descriptor_a2a_client_agent #ok
+        product_descriptor_a2a_client_agent #ok
         ],
     description="Transform the raw products’ images into studio quality images and video, ready for ecommerce"
 )
