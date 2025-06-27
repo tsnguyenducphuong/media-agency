@@ -66,7 +66,7 @@ LOCATION = os.getenv("GOOGLE_CLOUD_REGION", "us-central1")
 
 GOOGLE_APPLICATION_CREDENTIALS=os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
-IS_USE_VEO3=os.getenv("IS_USE_VEO3",False) 
+IS_USE_VEO3=(os.getenv('IS_USE_VEO3', 'False') == 'True') 
  
 IS_USE_GCS=(os.getenv('IS_USE_GCS', 'False') == 'True')
 
@@ -1541,6 +1541,8 @@ def save_image_local_or_gcs(image: Image, output_blob_name:str,SOURCE_BUCKET_NAM
             # Upload the resized image to the specified path in the same bucket
             destination_blob = source_bucket.blob(output_blob_name)
             destination_blob.upload_from_file(buffer, content_type=f'image/{output_format.lower()}')
+
+            logger.info("Successfully upload and save as:" + output_blob_name)
 
             return f"Successfully upload and saved as '{output_blob_name}'."
 
