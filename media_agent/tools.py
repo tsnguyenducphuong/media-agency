@@ -726,9 +726,10 @@ def generate_product_video(tool_context: ToolContext) -> dict:
         if not media_folder:
             return {"error": "not a valid media folder"} 
         
-          # Create local output folder if it doesn't exist and configured to use local instead of GCS
-        if IS_USE_GCS == False:
-            output_folder = os.path.join(media_folder,PROCESSED_FOLDER)
+        # Create local output folder if it doesn't exist and configured to use local instead of GCS
+        output_folder = os.path.join(media_folder,PROCESSED_FOLDER)
+
+        if IS_USE_GCS == False: 
             os.makedirs(output_folder, exist_ok=True)  
 
 
@@ -751,6 +752,8 @@ def generate_product_video(tool_context: ToolContext) -> dict:
             lastindexDot = image_name.rindex(".") 
             output_image_path = image_name[0:lastindexDot] + ".mp4"
             output_path = os.path.join(output_folder,output_image_path)  
+
+            output_image_blob_name = PROCESSED_FOLDER + "/" + image_name[0:lastindexDot] + ".mp4"
   
             video_prompt = ("Make a beautiful ecommerce video of this product image.")
             generate_audio = False
@@ -788,11 +791,20 @@ def generate_product_video(tool_context: ToolContext) -> dict:
             #         ['https://www.googleapis.com/auth/cloud-platform'])
             # client = genai.Client(vertexai=True, project=GOOGLE_CLOUD_PROJECT, location=LOCATION, credentials=scoped_credentials)
         
-            
-            local_input_image = types.Image.from_file(location=image_path)
-            input_image=types.Image(
-            image_bytes=local_input_image.image_bytes,
-            mime_type="image/png",)
+            if IS_USE_GCS == False:
+                local_input_image = types.Image.from_file(location=image_path)
+                input_image=types.Image(
+                image_bytes=local_input_image.image_bytes,
+                mime_type="image/png",)
+            else:
+                pil_image = get_image_local_or_gcs(image_path_or_blob_name=image_name,SOURCE_BUCKET_NAME=media_folder,isUsingGCS=IS_USE_GCS)
+                byte_io = io.BytesIO()
+                pil_image.save(byte_io, format='PNG')
+                image_bytes = byte_io.getvalue()
+
+                input_image=types.Image(
+                image_bytes=image_bytes,
+                mime_type="image/png",)
 
             
             operation = client.models.generate_videos(
@@ -809,13 +821,19 @@ def generate_product_video(tool_context: ToolContext) -> dict:
                 time.sleep(30) #wait 30 seconds for video generation
                 
                 operation = client.operations.get(operation)
-                print(operation)
+                # logger.info(operation)
 
             if operation.response: 
                 isVideoGenerated = 1
                 video_bytes = operation.result.generated_videos[0].video.video_bytes
-                with open(output_path, "wb") as binary_file:
-                    binary_file.write(video_bytes)
+
+                if IS_USE_GCS == True:
+                    bucketname = media_folder.replace("gs://","")
+                    upload_video_from_bytes(bucket_name=bucketname,video_bytes=video_bytes,destination_blob_name=output_image_blob_name)
+                    logger.info("successfully upload video:" + output_image_blob_name + " to bucket:" + bucketname)
+                else:
+                    save_video_from_bytes(filename=output_path,video_bytes=video_bytes)
+                    logger.info("successfully save video to: " + output_path) 
 
             if isVideoGenerated == 0:
                 return {"status": "failed"}
@@ -1195,14 +1213,12 @@ async def call_product_descriptor_a2a_server(tool_context: ToolContext) -> dict:
     """Make Product Description from input image by calling A2A server."""
     try:
         final_product_description = ""
-
+     
         # logger.info ("entering call_product_descriptor_a2a_server...")
         # Get current media folder 
         context_media_folder = tool_context.state["media_folder"]  
         media_folder=get_media_folder_from_context(context_media_folder)
-
-        # logger.info ("call_product_descriptor_a2a_server...media_folder=" + media_folder)
-
+ 
         if not media_folder:
             return {"error": "not a valid media folder"} 
         
@@ -1214,29 +1230,21 @@ async def call_product_descriptor_a2a_server(tool_context: ToolContext) -> dict:
         image_list = images_list_from_folder(media_folder)  
 
         if not image_list:
-            return {"error": "no image found in media folder: " + media_folder} 
-
-        # loop through each image in the media folder and change the background to white
-        # client = genai.Client(api_key=APIKEY)
-
-        # agent_url = "http://localhost:8080"
-        # # agent_url = "http://localhost:10002"
-       
+            return {"error": "no image found in media folder: " + media_folder}   
+        
         logger.info ("call_product_descriptor_a2a_server..." + AGENT_URL)
 
         async with httpx.AsyncClient(timeout=30) as http_client:
         # async with httpx.AsyncClient() as client:
           logger.info(f"Discovering A2A agent at {AGENT_URL}")
           card_resolver = A2ACardResolver(http_client, AGENT_URL)
-        #   agent_card = await A2AClient.get_agent_card(http_client, agent_url)
+          #   agent_card = await A2AClient.get_agent_card(http_client, agent_url)
           agent_card = await card_resolver.get_agent_card()
           logger.info(f"A2A Agent Card received: {agent_card.name}")
 
-        #   client = await A2AClient.get_client_from_agent_card(http_client, agent_card) 
+          #   client = await A2AClient.get_client_from_agent_card(http_client, agent_card) 
           client = A2AClient(http_client, url=AGENT_URL)
-         
-        #   logger.info ("call_product_descriptor_a2a_server, await A2AClient.get_client_from_agent_card")
-
+      
           for image_name in image_list:   
             if IS_USE_GCS == True:
                 image = get_image_local_or_gcs(image_path_or_blob_name=image_name,SOURCE_BUCKET_NAME=media_folder,isUsingGCS=IS_USE_GCS)
@@ -1252,9 +1260,8 @@ async def call_product_descriptor_a2a_server(tool_context: ToolContext) -> dict:
             else:
                 image_path = os.path.join(media_folder, image_name) 
                 if not image_path:
-                    return {"error": "no valid image path"} 
- 
-                # image = PIL.Image.open(image_path)
+                    return {"error": "no valid image path"}  
+             
                 with open(image_path, "rb") as image_file:
                     image_bytes = image_file.read()
             
@@ -1299,26 +1306,17 @@ async def call_product_descriptor_a2a_server(tool_context: ToolContext) -> dict:
             },
            } 
 
-            # logger.info("Sending task to the A2A server v3...")
-            # logger.info ("call_product_descriptor_a2a_server, Sending task to the A2A server...")
-
+           
             message_request_working = SendMessageRequest(
             # id=message_id, params=MessageSendParams.model_validate(payload)
             id=message_id, params=MessageSendParams(message=message),
             method="message/send"
-            )
-
-            # message_request = SendMessageRequest(
-            # id=message_id, params=MessageSendParams.model_validate(MessageSendParams(message=message)),
-            # method="message/send"
-            # )
+            ) 
 
             message_request_payload = SendMessageRequest(
             id=message_id, params=MessageSendParams.model_validate(payload),
             method="message/send"
-            )
-
-            # logger.info ("before client.send_message v3...")
+            ) 
 
             # response = await client.send_message(message_request)
 
@@ -1326,30 +1324,17 @@ async def call_product_descriptor_a2a_server(tool_context: ToolContext) -> dict:
              
             send_response: SendMessageResponse = await client.send_message(message_request_working)
            
-            # send_response: SendMessageResponse = await client.send_message(message_request_payload)
-            
-
-            # logger.info ("after client.send_message v3...")
-            # await client.send_message(
-            #     SendMessageRequest(params=MessageSendParams(message=message))
-            # )
-
-            # Extract the task_id from the MessageSendRequest
-            # task_id = response.task_id
-            # if not task_id:
-            #     logger.error("No task_id received from send_message response. Cannot track task.")
-            #     return
+            # send_response: SendMessageResponse = await client.send_message(message_request_payload) 
 
             if isinstance(send_response.root,JSONRPCErrorResponse):
                 response_error:JSONRPCErrorResponse = send_response.root
                 print ("send_response.root error detail=" + response_error.model_dump_json())
 
             if isinstance(
-                send_response.root, Message):
-                print ("send_response.root is instance of Message")
+                send_response.root, Message): 
                 response_message: Message = send_response.root
                 json_data = response_message.model_dump_json()
-                print ("json_data= " + json_data)
+           
 
             if not isinstance(
                 send_response.root, SendMessageSuccessResponse
@@ -1365,10 +1350,9 @@ async def call_product_descriptor_a2a_server(tool_context: ToolContext) -> dict:
             # task: TaskStatus = None # Initialize task variable
             # task:Task = None
             while True:
-                logger.info("calling client.get_task(task_request)...86c")
+             
                 task_request = GetTaskRequest(id=task_id,params=TaskQueryParams(id=executing_task_id))
-                get_task_response: GetTaskResponse = await client.get_task(task_request)
-                logger.info("called client.get_task(task_request) 86c")
+                get_task_response: GetTaskResponse = await client.get_task(task_request) 
 
                 if isinstance(get_task_response.root, GetTaskSuccessResponse):  
                             task = get_task_response.root.result  
@@ -1376,12 +1360,13 @@ async def call_product_descriptor_a2a_server(tool_context: ToolContext) -> dict:
                 else:  
                     break   
 
-                logger.info("called client.get_task(task_id), task.status.state..." + task.status.state)
-                logger.info("called client.get_task(task_id), task.status.id..." + task.id)
+                # logger.info("called client.get_task(task_id), task.status.state..." + task.status.state)
+                # logger.info("called client.get_task(task_id), task.status.id..." + task.id)
 
               
                 if task.status.state in ["completed", "failed"]:
                     break
+                
                 logger.info(f"Task status: {task.status.state}. Polling again in 5 seconds...")
                 
                 await asyncio.sleep(5) 
@@ -1395,23 +1380,17 @@ async def call_product_descriptor_a2a_server(tool_context: ToolContext) -> dict:
                     # agent_reply_artifacts = task.artifacts[-1]
                     agent_reply_parts = task.status.message.parts
                     for part in agent_reply_parts:
-                        logger.info("now processing parts....")
+                        # logger.info("now processing parts....")
                         if isinstance(part, TextPart):
-                            logger.info("\n--- Final Refined Image Description (from ADK A2A Agent) ---")
-                            logger.info(part.text)
+                            # logger.info("\n--- Final Refined Image Description (from ADK A2A Agent) ---")
+                           
                             final_product_description = part.text
-                            print ("call_product_descriptor_a2a_server, part.text=" + part.text)
+                            logger.info ("call_product_descriptor_a2a_server, part.text=" + part.text)
                             break
                 else:
-                    # logger.warning("Task completed, but no messages received from agent.")
+                  
                     str_detail = task.model_dump_json()  
-                    # output_path = "/Users/phuongnguyen/Documents/media-images/a2a_taskjsondump.txt"
-                 
-                    # with open(output_path, "w") as f:
-                    #             f.write(str_detail)
-
-                    # logger.debug ("successfully write to text file:" + output_path) 
-                    
+                   
                     json_data = json.loads(str_detail)
                     # Extract the embedded JSON string inside the 'text' field
                     text_block = json_data['artifacts'][0]['parts'][0]['text']
@@ -1422,51 +1401,33 @@ async def call_product_descriptor_a2a_server(tool_context: ToolContext) -> dict:
                     # Load the embedded JSON
                     inner_data = json.loads(inner_json_str)
 
-                        # Extract product_description
+                    # Extract product_description
                     product_description = inner_data['product_description']
                      
                     # logger.info("long path, product_description is empty")
                     
-                    logger.info("long path, product_description=" + product_description)
+                    logger.info("product_description=" + product_description)
 
                     text_file_name = image_name.replace(".png",".txt")
-                    decription_output_path = "/Users/phuongnguyen/Documents/media-images/" + text_file_name
-                 
-                    with open(decription_output_path, "w") as f:
-                                f.write(product_description)
 
-                    print ("successfully write description to text file:" + decription_output_path) 
-                    # if artifacts:
-                    #     last_parts:Part = artifacts[-1]
-                    #     if isinstance(last_parts, TextPart):
-                    #         result_text=last_parts.text
-                    #         logger.info("task.artifacts[-1].part.text=" + result_text)
+                    if IS_USE_GCS:
+                        decription_output_file_name = PROCESSED_FOLDER + "/" + text_file_name
+                        bucketname = media_folder.replace("gs://","")
+                        upload_string_to_gcs(bucket_name=bucketname,content=product_description,destination_blob_name=decription_output_file_name)
+                        logger.info ("successfully write description to text file:" + " bucket:" + bucketname + ", output blob name:" + decription_output_file_name) 
+                    else:
+                        decription_output_file_name = os.path.join(media_folder,PROCESSED_FOLDER)
+                        decription_output_file_name = os.path.join(decription_output_file_name,text_file_name)
+                        save_string_to_file(filename=decription_output_file_name,content=product_description) 
+                        logger.info ("successfully write description to text file:" + decription_output_file_name) 
+                   
             else:
                 logger.error(f"Task failed. Status: {task.status.state}")
                 if task.artifacts:
                     # Log the last message for error details
                     for part in task.artifacts[-1].parts:
                         if isinstance(part, TextPart):
-                            logger.error(f"Error details: {part.text}")
-
-       
-        # print("send_response", send_response)
-
-            
-
-            # response_content = send_response.root.model_dump_json(exclude_none=True)
-
-            # logger.info("response_content:" + response_content)
-
-            # json_content = json.loads(response_content)
-
-            # resp = []
-            # if json_content.get("result", {}).get("artifacts"):
-            #     for artifact in json_content["result"]["artifacts"]:
-            #         if artifact.get("parts"):
-            #             resp.extend(artifact["parts"])
-            # return resp
-
+                            logger.error(f"Error details: {part.text}") 
 
         return {
             "status": "success",
@@ -1639,3 +1600,162 @@ def get_image_local_or_gcs(image_path_or_blob_name:str,SOURCE_BUCKET_NAME, isUsi
     except Exception as e:
         logger.debug(f"Error in get_image_local_or_gcs: {e}")
         return f"An error occurred while processing {image_path_or_blob_name}: {e}"
+    
+
+def save_string_to_file(filename, content):
+    """Writes a given string content to a local file.
+
+    Args:
+        filename (str): The name of the file to create and write to.
+        content (str): The string content to be written to the file.
+
+    Returns:
+        bool: True if writing was successful, False otherwise.
+    """
+    try:
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(content)
+        logger.info(f"Successfully saved content to '{filename}'")
+        return True
+    except IOError as e:
+        logger.info(f"Error writing to file '{filename}': {e}")
+        return False
+
+def upload_file_to_gcs(bucket_name, source_file_name, destination_blob_name):
+    """Uploads a file to the specified Google Cloud Storage bucket.
+
+    Args:
+        bucket_name (str): The name of your GCS bucket.
+        source_file_name (str): The path to the local file to upload.
+        destination_blob_name (str): The name of the object in GCS.
+
+    Returns:
+        bool: True if upload was successful, False otherwise.
+    """
+    try:
+        # Initialize the GCS client
+        storage_client = get_gcs_client() #storage.Client()
+
+        # Get the target bucket
+        bucket = storage_client.bucket(bucket_name)
+
+        # Create a blob object for the destination
+        blob = bucket.blob(destination_blob_name)
+
+        # Upload the local file to the blob
+        logger.info(f"Uploading '{source_file_name}' to GCS bucket '{bucket_name}' as '{destination_blob_name}'...")
+        blob.upload_from_filename(source_file_name)
+
+        print(f"File '{source_file_name}' uploaded successfully to '{destination_blob_name}'.")
+        return True
+    except exceptions.NotFound:
+        print(f"Error: Bucket '{bucket_name}' not found.")
+        return False
+    except exceptions.Forbidden as e:
+        print(f"Error: Permission denied for bucket '{bucket_name}'. Check your credentials and permissions.")
+        print(f"Details: {e}")
+        return False
+    except FileNotFoundError:
+        print(f"Error: The source file '{source_file_name}' was not found.")
+        return False
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return False
+    
+def upload_string_to_gcs(bucket_name, content, destination_blob_name):
+    """Uploads a string to the specified Google Cloud Storage bucket.
+
+    Args:
+        bucket_name (str): The name of your GCS bucket.
+        content (str): The string content to upload.
+        destination_blob_name (str): The name of the object in GCS.
+
+    Returns:
+        bool: True if upload was successful, False otherwise.
+    """
+    try:
+        # Initialize the GCS client
+        storage_client = get_gcs_client() #storage.Client()
+
+        # Get the target bucket
+        bucket = storage_client.bucket(bucket_name)
+
+        # Create a blob object for the destination
+        blob = bucket.blob(destination_blob_name)
+
+        # Upload the string to the blob
+        logger.info(f"Uploading string to GCS bucket '{bucket_name}' as '{destination_blob_name}'...")
+        blob.upload_from_string(content)
+
+        logger.info(f"String uploaded successfully to '{destination_blob_name}'.")
+        return True
+    except exceptions.NotFound:
+        logger.debug(f"Error: Bucket '{bucket_name}' not found.")
+        return False
+    except exceptions.Forbidden as e:
+        logger.debug(f"Error: Permission denied for bucket '{bucket_name}'. Check your credentials and permissions.")
+        logger.debug(f"Details: {e}")
+        return False
+    except Exception as e:
+        logger.debug(f"An unexpected error occurred: {e}")
+        return False
+
+def save_video_from_bytes(filename, video_bytes):
+    """Writes a given bytestring of video data to a local file.
+
+    Args:
+        filename (str): The name of the file to create and write to.
+        video_bytes (bytes): The video data to be written to the file.
+
+    Returns:
+        bool: True if writing was successful, False otherwise.
+    """
+    try:
+        # Open the file in write-binary ('wb') mode
+        with open(filename, 'wb') as f:
+            f.write(video_bytes)
+        logger.info(f"Successfully saved video bytes to '{filename}'")
+        return True
+    except IOError as e:
+        logger.info(f"Error writing to file '{filename}': {e}")
+        return False
+
+def upload_video_from_bytes(bucket_name, video_bytes, destination_blob_name, content_type='video/mp4'):
+    """Uploads video bytes to the specified Google Cloud Storage bucket.
+
+    Args:
+        bucket_name (str): The name of your GCS bucket.
+        video_bytes (bytes): The video content to upload.
+        destination_blob_name (str): The name of the object in GCS.
+        content_type (str): The content type of the video file (e.g., 'video/mp4').
+
+    Returns:
+        bool: True if upload was successful, False otherwise.
+    """
+    try:
+        # Initialize the GCS client
+        storage_client = get_gcs_client() #storage.Client()
+
+        # Get the target bucket
+        bucket = storage_client.bucket(bucket_name)
+
+        # Create a blob object for the destination
+        blob = bucket.blob(destination_blob_name)
+
+        # Upload the bytes to the blob, specifying the content type
+        logger.info(f"Uploading video bytes to GCS bucket '{bucket_name}' as '{destination_blob_name}'...")
+        blob.upload_from_string(video_bytes, content_type=content_type)
+
+        logger.info(f"Video bytes uploaded successfully to '{destination_blob_name}'.")
+        return True
+    except exceptions.NotFound:
+        logger.debug(f"Error: Bucket '{bucket_name}' not found.")
+        return False
+    except exceptions.Forbidden as e:
+        logger.debug(f"Error: Permission denied for bucket '{bucket_name}'. Check your credentials and permissions.")
+        logger.debug(f"Details: {e}")
+        return False
+    except Exception as e:
+        logger.debug(f"An unexpected error occurred: {e}")
+        return False
+
