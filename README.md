@@ -126,7 +126,8 @@ media_agent
 
 **Or deploy using gcloud:**
 
-Update the GOOGLE_API_KEY inside the envvariables.yaml file with your API KEY.
+Update the GOOGLE_API_KEY inside the envvariables.yaml file with your API KEY. Also update the AGENT_URL
+to the A2A Server URL (looks like: ). Notes: set AGENT_URL:localhost if you run the [A2A Product Description Server](https://github.com/tsnguyenducphuong/product_description_a2a_server) locally.
 
 ```bash
 
