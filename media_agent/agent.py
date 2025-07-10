@@ -19,13 +19,13 @@ from .sub_agents.product_descriptor_a2a_client import product_descriptor_a2a_cli
 media_processing_parallel = ParallelAgent(
     name="media_processing_parallel",
     sub_agents=[ 
-        background_replacer_agent, #ok 2
-        carousel_generator_agent, #ok 2
+        background_replacer_agent, #ok 
+        carousel_generator_agent, #ok 
         image_upscaler_agent,     #ok  
-        multi_angles_generator_agent,#ok 2
-        product_video_generator_agent, #ok local
+        multi_angles_generator_agent,#ok 
+        product_video_generator_agent, #ok
         # skia_effect_agent, #ok not use
-        thumbnail_generator_agent, #ok, not use
+        thumbnail_generator_agent, #ok
         product_descriptor_a2a_client_agent #ok
         ],
     description="Transform the raw products’ images into studio quality images and video, ready for ecommerce"
