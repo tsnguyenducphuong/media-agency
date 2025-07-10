@@ -59,7 +59,19 @@ pip install -r requirements.txt
 ```
 
 4. **Change the .env variables: update your Google API Key, etc.**
-+ Note that for processing local images, set the environment variable (in .env file) IS_USE_GCS=False
++ Note that for processing local images, set the environment variables (in .env file) **IS_USE_GCS=False**
+
++ For calling the local A2A Server [Product Description Server](https://github.com/tsnguyenducphuong/product_description_a2a_server), set the .env variable:
+
+AGENT_URL=http://localhost:8080
+
+in which port 8080 is the port that the A2A Server is configured to run. 
+
++ If you run the A2A Server on a different port, change the port in AGENT_URL accordingly.
++ If you deploy A2A Product Description Server on Cloud Run, change the AGENT_URL to the deployed service accordingly, the Cloud Run URL should look similar to:
+https://product-description-agent-86390171XXXX.us-central1.run.app
+
+(product-description-agent = name of your service; central1 = LOCATION)
 
 5. **Run command:**
 
