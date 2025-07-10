@@ -63,7 +63,7 @@ pip install -r requirements.txt
 
 + For calling the local A2A Server [Product Description Server](https://github.com/tsnguyenducphuong/product_description_a2a_server), set the .env variable:
 
-AGENT_URL=http://localhost:8080
+**AGENT_URL=http://localhost:8080**
 
 in which port 8080 is the port that the A2A Server is configured to run. 
 
