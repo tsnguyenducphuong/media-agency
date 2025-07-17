@@ -1123,20 +1123,25 @@ def generate_thumbnail_with_skia(image_path, output_path,output_filename,media_f
 
         thumbnail_image = image.resize(width=new_width,height=new_height)
 
-        image_bytes_io = BytesIO()
+        if IS_USE_GCS == False:
+            thumbnail_image.save(output_path)
+        else:
+
+            image_bytes_io = BytesIO()
 
             # Save the skia image to the BytesIO object
             # You need to specify the image format (e.g., skia.kPNG, skia.kJPEG)
-        thumbnail_image.save(image_bytes_io, skia.kPNG)
+            thumbnail_image.save(image_bytes_io, skia.kPNG)
 
             # After saving, the BytesIO object's internal pointer is at the end of the data.
             # To read the bytes, you need to seek back to the beginning.
-        image_bytes_io.seek(0)
+            image_bytes_io.seek(0)
   
-        # thumbnail_image.save(output_path)
-        source_bucket = media_folder.replace("gs://","")
-        save_image_local_or_gcs(image=image_bytes_io,output_blob_name=output_filename,SOURCE_BUCKET_NAME=source_bucket,OUTPUT_FOLDER_NAME=PROCESSED_FOLDER,isSaveGCS=IS_USE_GCS,isByteIOImage=False,byteIOImage=None)
-
+            # thumbnail_image.save(output_path)
+            source_bucket = media_folder.replace("gs://","")
+            # save_image_local_or_gcs(image=image_bytes_io,output_blob_name=output_filename,SOURCE_BUCKET_NAME=source_bucket,OUTPUT_FOLDER_NAME=PROCESSED_FOLDER,isSaveGCS=IS_USE_GCS,isByteIOImage=False,byteIOImage=None)
+            save_image_local_or_gcs(image=image_bytes_io,output_blob_name=output_filename,SOURCE_BUCKET_NAME=source_bucket,OUTPUT_FOLDER_NAME=PROCESSED_FOLDER,isSaveGCS=IS_USE_GCS,isByteIOImage=True,byteIOImage=image_bytes_io)
+         
         return 0
     except Exception as e:
         print (f"error generate_thumbnail_with_skia: {e}")
