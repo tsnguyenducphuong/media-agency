@@ -185,10 +185,10 @@ def images_list_from_folder(media_folder: str) -> dict:
     # Show summary
     if success_count > 0:
         # tool_context.state["image_list"] = image_list
-        message = f"Initial processing complete!\nSuccessfully add: {success_count} images for being processed by media agency"
+        message = f"Initial processing complete!\nSuccessfully add: {success_count} images for being processed by media agency, media folder: {folder_path}"
         print("Summary:" + message)
     else:
-        message = f"Found no support image (png, jpeg, gif, bmp) in the selected folder"
+        message = f"Found no support image (png, jpeg, gif, bmp) in the selected folder: {folder_path}"
         print("Error:" + message)
 
     # return {"description":"list of images in the media folder", "image_list": image_list, "media folder": folder_path}
