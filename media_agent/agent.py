@@ -19,12 +19,11 @@ from .sub_agents.product_descriptor_a2a_client import product_descriptor_a2a_cli
 media_processing_parallel = ParallelAgent(
     name="media_processing_parallel",
     sub_agents=[ 
+        image_upscaler_agent,     #ok  
         background_replacer_agent, #ok 
         carousel_generator_agent, #ok 
-        image_upscaler_agent,     #ok  
         multi_angles_generator_agent,#ok 
         product_video_generator_agent, #ok
-        # skia_effect_agent, #ok not use
         thumbnail_generator_agent, #ok
         product_descriptor_a2a_client_agent #ok
         ],
