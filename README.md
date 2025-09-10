@@ -1,7 +1,7 @@
 # Ecommerce Media Agency
 
 ## I. Introduction:
-AI agents that are specialized in creating beautiful content (images, video, and product description) for your product images.
+AI agents that are specialized in creating beautiful content (images, video, and product description) for your product images using state-of-the-art [Google Nano Banana](https://aistudio.google.com/models/gemini-2-5-flash-image) and [Google VEO](https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/veo-video-generation) models.
 
 ## Key features:
 
